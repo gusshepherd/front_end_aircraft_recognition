@@ -21,7 +21,7 @@ url = os.getenv('API_URL')
 st.header('Simple Image Uploader 📸')
 
 ### Create a native Streamlit file upload input
-st.markdown("### aircraft type recognition 👇")
+st.markdown("### Aircraft Type Recognition 👇")
 img_file_buffer = st.file_uploader('Upload an image')
 
 if img_file_buffer is not None:
@@ -41,9 +41,15 @@ if img_file_buffer is not None:
       if res.status_code == 200:
         ### Display the image returned by the API
         content = json.loads(res.content)
-        
         predicted_class = content["predicted_class"]
-        st.write(f"Predicted Class: {predicted_class}")
+        placeholder = st.empty() # Create a placeholder ## <-- new change
+        placeholder.markdown(f"<div style='text-align: center;'>Predicted Class: {predicted_class}</div>", unsafe_allow_html=True)
+        # placeholder.write(f"Predicted Class: {predicted_class}") # Write to the placeholder ## <-- new change
+        information = "info about the class " + predicted_class
+        info_placeholder = st.empty()
+        info_placeholder.markdown(f"<div style='text-align: center;'>Information: {information}</div>", unsafe_allow_html=True) 
+        # info_placeholder.write(f"Information: {information}") ## <-- info placeholder
+        # st.write(f"Predicted Class: {predicted_class}")
       else:
         st.markdown("**Oops**, something went wrong 😓 Please try again.")
         print(res.status_code, res.content)
