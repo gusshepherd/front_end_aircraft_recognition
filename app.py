@@ -3,7 +3,7 @@ from PIL import Image
 import requests
 import io
 import json
-from class_info import dict_aircraft_info, display_name_dict, aircraft_classes  # Import the dictionary
+from class_info import dict_aircraft_info, display_name_dict, aircraft_classes, display_name  # Import the dictionary
 from base64 import b64encode  # Import the b64encode function
 import numpy as np  # Import NumPy for array manipulation
 
@@ -46,9 +46,10 @@ if img_file_buffer is not None:
 
                 # Extract the top 3 predicted classes and their probabilities
                 prediction_probs = content["probabilty_np"]
-                prediction_probs = np.array(prediction_probs)  # Convert to NumPy array
-                prediction_probs_list = prediction_probs.tolist()
-                top_index_1 = np.argmax(prediction_probs)
+                prediction_probs = str(prediction_probs[2:-2])
+                # prediction_probs = np.array(prediction_probs)  # Convert to NumPy array
+                prediction_probs_list = [float(value) for value in prediction_probs.split()]
+                top_index_1 = prediction_probs_list.index(max(prediction_probs_list))
                 top_prediction_1 = aircraft_classes[top_index_1]
                 #####2
                 # top_index_2 = np.argpartition(prediction_probs, -2)[-2]
@@ -56,9 +57,11 @@ if img_file_buffer is not None:
 
                 # Display the prediction
                 if top_prediction_1 in display_name_dict:
-                    centered_and_boxed_line = f"<div style='text-align: center; border: 2px solid #ccc; padding: 10px;'>Model's prediction: {display_name_dict[top_prediction_1]} ({prediction_probs_list[top_index_1]})</div>" ##
-                    # Display the line
+                    centered_and_boxed_line = f"<div style='text-align: center; border: 2px solid #ccc; padding: 10px;'><b>Model's prediction:</b> {display_name_dict[top_prediction_1]}</div>" ##
+                    centered_and_boxed_line_acc = f"<div style='text-align: center; border: 2px solid #ccc; padding: 10px;'><b>Certainty level:</b> {prediction_probs_list[top_index_1]}%</div>" ##
+                    # Display the line ({prediction_probs_list[top_index_1]})
                     st.markdown(centered_and_boxed_line, unsafe_allow_html=True)
+                    st.markdown(centered_and_boxed_line_acc, unsafe_allow_html=True)
                 else:
                     st.write("Unknown Class")
 
@@ -87,14 +90,27 @@ if img_file_buffer is not None:
                 st.markdown("**Oops**, something went wrong 😓 Please try again.")
                 print(res.status_code, res.content)
     with col3:
-        st.write('to be continued..')
-#####################################################################################
-        # top_index_2 = np.argpartition(prediction_probs, -2)[-2]
-        # top_prediction_2 = aircraft_classes[top_index_2]
-        # if top_prediction_2 in display_name_dict:
-        #     centered_and_boxed_line_2 = f"<div style='text-align: center; border: 2px solid #ccc; padding: 10px;'>Model's secondary prediction: {display_name_dict[top_prediction_2]} ({prediction_probs_list[top_index_2]})</div>"
-        #     # Display the line
-        #     st.markdown(centered_and_boxed_line_2, unsafe_allow_html=True)
-        # else:
-        #     st.write("Unknown Class")
-################################################################
+        st.markdown(
+            '<div style="text-align: center; border: 2px solid #ccc; padding: 10px;">'
+            '<h3>Probability Distribution</h3>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+
+        # text_of_probs = ""
+        for i in range(len(prediction_probs_list)):
+            st.write(f'\n{display_name[i]}: {round(prediction_probs_list[i], 4)}%\n')
+
+        # st.markdown(
+        #     '<div style="border: 2px solid #ccc; padding: 10px;">'
+        #     '<h3>f"{text_of_probs}"</h3>'
+        #     '</div>',
+        #     unsafe_allow_html=True
+        # )
+
+
+
+        # st.write('to be continued..')
+        # st.write(f'{content}')
+        # st.write(f'{prediction_probs}')
+        # st.write(f'{prediction_probs_list}')
