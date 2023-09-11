@@ -1,7 +1,7 @@
 import streamlit as st
 from PIL import Image
 import requests
-from dotenv import load_dotenv
+#from dotenv import load_dotenv
 import os
 import io
 import json
@@ -14,8 +14,8 @@ st.set_page_config(
    initial_sidebar_state="expanded",
 )
 
-load_dotenv()
-url = os.getenv('API_URL')
+# load_dotenv()
+# url = os.getenv('API_URL')
 
 # App title and description
 st.header('Simple Image Uploader 📸')
@@ -47,11 +47,9 @@ if img_file_buffer is not None:
         # placeholder.write(f"Predicted Class: {predicted_class}") # Write to the placeholder ## <-- new change
         information = "info about the class " + predicted_class
         info_placeholder = st.empty()
-        info_placeholder.markdown(f"<div style='text-align: center;'>Information: {information}</div>", unsafe_allow_html=True) 
+        info_placeholder.markdown(f"<div style='text-align: center;'>Information: {information}</div>", unsafe_allow_html=True)
         # info_placeholder.write(f"Information: {information}") ## <-- info placeholder
         # st.write(f"Predicted Class: {predicted_class}")
       else:
         st.markdown("**Oops**, something went wrong 😓 Please try again.")
         print(res.status_code, res.content)
-
-
