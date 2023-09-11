@@ -35,7 +35,7 @@ if img_file_buffer is not None:
     with col2:
         with st.spinner("Processing image..."):
         ### Get bytes from the file buffer
-        img_bytes = img_file_buffer.getvalue()
+            img_bytes = img_file_buffer.getvalue()
         ### Make request to  API (stream=True to stream response as bytes)
         res = requests.post("https://aircraftprediction-h7pqzemfza-ew.a.run.app/predict", files={'file': img_bytes})
         if res.status_code == 200:
