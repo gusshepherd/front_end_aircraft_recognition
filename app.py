@@ -1,11 +1,12 @@
 import streamlit as st
 from PIL import Image
 import requests
-#from dotenv import load_dotenv
-import os
 import io
 import json
-from class_info import dict_aircraft_info, display_name_dict  # Import the dictionary
+from class_info import dict_aircraft_info, display_name_dict, aircraft_classes  # Import the dictionary
+from base64 import b64encode  # Import the b64encode function
+import numpy as np  # Import NumPy for array manipulation
+
 # Set page tab display
 st.set_page_config(
     page_title="Simple Image Uploader",
@@ -13,9 +14,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-
-# load_dotenv()
-# url = os.getenv('API_URL')
 
 # App title and description
 st.header('Simple Image Uploader 📸')
@@ -26,30 +24,77 @@ img_file_buffer = st.file_uploader('Upload an image')
 
 if img_file_buffer is not None:
 
-    col1, col2 = st.columns(2)  # Create a column layout
-
+    col1, col2, col3 = st.columns(3)  # Create a column layout
     with col1:
-        ### Display the image user uploaded
-        st.image(Image.open(img_file_buffer), caption="Here's the image you uploaded ☝️")
+        st.image(Image.open(img_file_buffer), use_column_width=True)
+        st.caption("Here's the image you uploaded ☝️")
+        ###########
+        # st.image(Image.open('default_image'), use_column_width=True)
+        # st.caption("Here's another image of this aircraft type")
 
     with col2:
         with st.spinner("Processing image..."):
-        ### Get bytes from the file buffer
-        img_bytes = img_file_buffer.getvalue()
-        ### Make request to  API (stream=True to stream response as bytes)
-        res = requests.post("https://aircraftprediction-h7pqzemfza-ew.a.run.app/predict", files={'file': img_bytes})
-        if res.status_code == 200:
-            ### Display the image returned by the API
-            content = json.loads(res.content)
-            predicted_class = content["predicted_class"]
-            placeholder = st.empty() # Create a placeholder ## <-- new change
-            placeholder.markdown(f"<div style='text-align: center;'>Predicted Class: {predicted_class}</div>", unsafe_allow_html=True)
-            # placeholder.write(f"Predicted Class: {predicted_class}") # Write to the placeholder ## <-- new change
-            information = "info about the class " + predicted_class
-            info_placeholder = st.empty()
-            info_placeholder.markdown(f"<div style='text-align: center;'>Information: {information}</div>", unsafe_allow_html=True)
-            # info_placeholder.write(f"Information: {information}") ## <-- info placeholder
-            # st.write(f"Predicted Class: {predicted_class}")
-        else:
-            st.markdown("**Oops**, something went wrong 😓 Please try again.")
-            print(res.status_code, res.content)
+            ### Get bytes from the file buffer
+            img_bytes = img_file_buffer.getvalue()
+            ### Make request to API (stream=True to stream response as bytes)
+            res = requests.post("https://aircraftprediction-h7pqzemfza-ew.a.run.app/predict", files={'file': img_bytes})
+            if res.status_code == 200:
+                ### Display the image returned by the API
+                content = json.loads(res.content)
+                ####
+                # st.write(content)
+
+                # Extract the top 3 predicted classes and their probabilities
+                prediction_probs = content["probabilty_np"]
+                prediction_probs = np.array(prediction_probs)  # Convert to NumPy array
+                prediction_probs_list = prediction_probs.tolist()
+                top_index_1 = np.argmax(prediction_probs)
+                top_prediction_1 = aircraft_classes[top_index_1]
+                #####2
+                # top_index_2 = np.argpartition(prediction_probs, -2)[-2]
+                # top_prediction_2 = aircraft_classes[top_index_2]
+
+                # Display the prediction
+                if top_prediction_1 in display_name_dict:
+                    centered_and_boxed_line = f"<div style='text-align: center; border: 2px solid #ccc; padding: 10px;'>Model's prediction: {display_name_dict[top_prediction_1]} ({prediction_probs_list[top_index_1]})</div>" ##
+                    # Display the line
+                    st.markdown(centered_and_boxed_line, unsafe_allow_html=True)
+                else:
+                    st.write("Unknown Class")
+
+                if top_prediction_1 in dict_aircraft_info:
+                    class_info_text = dict_aircraft_info[top_prediction_1]
+                    ### Add box ###
+                else:
+                    class_info_text = "We currently don't have extensive information about this aircraft"
+
+                # Split the class_info_text by '\n' and join with '<br>' to display each line on a new line in HTML
+                class_info_lines = class_info_text.split('\n')
+
+                # Modify each line to make the text before ':' bold
+                class_info_lines = [line.split(':', 1) for line in class_info_lines]
+                class_info_lines = [f"<b>{line[0]}</b>:{line[1]}" for line in class_info_lines]
+
+                class_info_html = "<br>".join(class_info_lines)
+
+                # Remove the prefix and add a CSS style to align the text to the left
+                information = f"<div style='text-align: left; border: 2px solid #ccc; padding: 10px;'>{class_info_html}</div>"
+
+                info_placeholder = st.empty()
+                info_placeholder.markdown(information, unsafe_allow_html=True)
+
+            else:
+                st.markdown("**Oops**, something went wrong 😓 Please try again.")
+                print(res.status_code, res.content)
+    with col3:
+        st.write('to be continued..')
+#####################################################################################
+        # top_index_2 = np.argpartition(prediction_probs, -2)[-2]
+        # top_prediction_2 = aircraft_classes[top_index_2]
+        # if top_prediction_2 in display_name_dict:
+        #     centered_and_boxed_line_2 = f"<div style='text-align: center; border: 2px solid #ccc; padding: 10px;'>Model's secondary prediction: {display_name_dict[top_prediction_2]} ({prediction_probs_list[top_index_2]})</div>"
+        #     # Display the line
+        #     st.markdown(centered_and_boxed_line_2, unsafe_allow_html=True)
+        # else:
+        #     st.write("Unknown Class")
+################################################################
