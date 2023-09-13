@@ -1,11 +1,14 @@
+### Imports ###
+
 import streamlit as st
 from PIL import Image
 import requests
 import io
 import json
-from class_info import dict_aircraft_info, display_name_dict, aircraft_classes, display_name  # Import the dictionary
-from base64 import b64encode  # Import the b64encode function
-import numpy as np  # Import NumPy for array manipulation
+from class_info_imp import aircraft_data, aircraft_classes
+from base64 import b64encode
+import numpy as np
+import base64
 
 # Set page tab display
 st.set_page_config(
@@ -14,6 +17,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+st.sidebar.markdown("---") # column sep
 
 # App title and description
 st.header('Simple Image Uploader 📸')
@@ -22,95 +26,159 @@ st.header('Simple Image Uploader 📸')
 st.markdown("### Aircraft Type Recognition 👇")
 img_file_buffer = st.file_uploader('Upload an image')
 
-if img_file_buffer is not None:
+### Defining CSS styles for smooth displays
 
-    col1, col2, col3 = st.columns(3)  # Create a column layout
+custom_css_green = """
+                    <style>
+                        .custom-markdown-green {
+                            border: 2px solid #00FF00; /* Green border */
+                            border-radius: 15px; /* Rounded corners */
+                            padding: 10px; /* Padding inside the box */
+                            background-color: #F0FFF0; /* Light green background */
+                            text-align: center; /* Center text */
+                        }
+                    </style>
+                    """
+
+rounded_image_style = """
+                    <style>
+                        .rounded-image-container {
+                            border: none;
+                            padding: 10px;
+                            border-radius: 15px; /* Adjust this value for rounded corners */
+                            overflow: hidden; /* Hide overflowing content (for rounded corners) */
+                        }
+
+                        .rounded-image {
+                            width: 100%;
+                            height: auto;
+                            border-radius: 15px; /* Match the container's border-radius for rounded corners */
+                            border: none;
+                        }
+                    </style>
+                    """
+
+if img_file_buffer is not None: # if a picture has been uploaded, proceed
+
+    ### Read from API
+    img_bytes = img_file_buffer.getvalue()
+    res = requests.post("https://aircraftprediction-h7pqzemfza-ew.a.run.app/predict", files={'file': img_bytes})
+    content = json.loads(res.content)
+
+    if res.status_code == 200: # if the image is processed by the model & API
+
+        # defining vairables used throughout code
+        prediction_probs = str(content["probabilty_np"][2:-2])
+        prediction_probs_list = [float(value) for value in prediction_probs.split()]
+        top_index_1 = prediction_probs_list.index(max(prediction_probs_list))
+        top_prediction_1 = aircraft_classes[top_index_1]
+        top_pred_acc = round(prediction_probs_list[top_index_1]*100, 2)
+        indices_list = sorted(range(len(prediction_probs_list)), key = lambda i: prediction_probs_list[i], reverse=True)
+        top_pred_list = [aircraft_classes[i] for i in indices_list]
+
+        # 3 first predictions :
+        pred_1 = f"{aircraft_data[top_pred_list[0]]['display_name']} : {round(prediction_probs_list[indices_list[0]]*100,2)}%"
+        pred_2 = f"{aircraft_data[top_pred_list[1]]['display_name']} : {round(prediction_probs_list[indices_list[1]]*100,2)}%"
+        pred_3 = f"{aircraft_data[top_pred_list[2]]['display_name']} : {round(prediction_probs_list[indices_list[2]]*100,2)}%"
+
+    else:
+        st.markdown("**Oops**, something went wrong 😓 Please try again.")
+        print(res.status_code, res.content)
+
+    col1, col2 = st.columns(2)  # Create a column layout
+
     with col1:
-        st.image(Image.open(img_file_buffer), use_column_width=True)
-        st.caption("Here's the image you uploaded ☝️")
-        ###########
-        # st.image(Image.open('default_image'), use_column_width=True)
-        # st.caption("Here's another image of this aircraft type")
 
-    with col2:
-        with st.spinner("Processing image..."):
-            ### Get bytes from the file buffer
-            img_bytes = img_file_buffer.getvalue()
-            ### Make request to API (stream=True to stream response as bytes)
-            res = requests.post("https://aircraftprediction-h7pqzemfza-ew.a.run.app/predict", files={'file': img_bytes})
-            if res.status_code == 200:
-                ### Display the image returned by the API
-                content = json.loads(res.content)
-                ####
-                # st.write(content)
-
-                # Extract the top 3 predicted classes and their probabilities
-                prediction_probs = content["probabilty_np"]
-                prediction_probs = str(prediction_probs[2:-2])
-                # prediction_probs = np.array(prediction_probs)  # Convert to NumPy array
-                prediction_probs_list = [float(value) for value in prediction_probs.split()]
-                top_index_1 = prediction_probs_list.index(max(prediction_probs_list))
-                top_prediction_1 = aircraft_classes[top_index_1]
-                #####2
-                # top_index_2 = np.argpartition(prediction_probs, -2)[-2]
-                # top_prediction_2 = aircraft_classes[top_index_2]
-
-                # Display the prediction
-                if top_prediction_1 in display_name_dict:
-                    centered_and_boxed_line = f"<div style='text-align: center; border: 2px solid #ccc; padding: 10px;'><b>Model's prediction:</b> {display_name_dict[top_prediction_1]}</div>" ##
-                    centered_and_boxed_line_acc = f"<div style='text-align: center; border: 2px solid #ccc; padding: 10px;'><b>Certainty level:</b> {prediction_probs_list[top_index_1]}%</div>" ##
-                    # Display the line ({prediction_probs_list[top_index_1]})
-                    st.markdown(centered_and_boxed_line, unsafe_allow_html=True)
-                    st.markdown(centered_and_boxed_line_acc, unsafe_allow_html=True)
-                else:
-                    st.write("Unknown Class")
-
-                if top_prediction_1 in dict_aircraft_info:
-                    class_info_text = dict_aircraft_info[top_prediction_1]
-                    ### Add box ###
-                else:
-                    class_info_text = "We currently don't have extensive information about this aircraft"
-
-                # Split the class_info_text by '\n' and join with '<br>' to display each line on a new line in HTML
-                class_info_lines = class_info_text.split('\n')
-
-                # Modify each line to make the text before ':' bold
-                class_info_lines = [line.split(':', 1) for line in class_info_lines]
-                class_info_lines = [f"<b>{line[0]}</b>:{line[1]}" for line in class_info_lines]
-
-                class_info_html = "<br>".join(class_info_lines)
-
-                # Remove the prefix and add a CSS style to align the text to the left
-                information = f"<div style='text-align: left; border: 2px solid #ccc; padding: 10px;'>{class_info_html}</div>"
-
-                info_placeholder = st.empty()
-                info_placeholder.markdown(information, unsafe_allow_html=True)
-
-            else:
-                st.markdown("**Oops**, something went wrong 😓 Please try again.")
-                print(res.status_code, res.content)
-    with col3:
+        ### Display text "here's your uploaded picture"
         st.markdown(
-            '<div style="text-align: center; border: 2px solid #ccc; padding: 10px;">'
-            '<h3>Probability Distribution</h3>'
-            '</div>',
+            '<h2 style="text-align: center;">Here is the picture you uploaded 👇</h2>',
             unsafe_allow_html=True
         )
 
-        # text_of_probs = ""
-        for i in range(len(prediction_probs_list)):
-            st.write(f'\n{display_name[i]}: {round(prediction_probs_list[i], 4)}%\n')
+        ### Display uploaded image
+        st.markdown(rounded_image_style, unsafe_allow_html=True)
 
-        # st.markdown(
-        #     '<div style="border: 2px solid #ccc; padding: 10px;">'
-        #     '<h3>f"{text_of_probs}"</h3>'
-        #     '</div>',
-        #     unsafe_allow_html=True
-        # )
+        img_base64 = base64.b64encode(img_bytes).decode()
+        rounded_image_html = f"""
+        <div class="rounded-image-container">
+            <img src="data:image/jpeg;base64,{img_base64}" class="rounded-image">
+        </div>
+        """
+
+        st.markdown(rounded_image_html, unsafe_allow_html=True)
+
+        if top_pred_acc >= 70: # On the condition that the model has a confident prediction
+            with st.expander('Want to learn more about this aircraft type 🧐? '):
+                info = aircraft_data[top_pred_list[0]]['info_box'].split('\n')
+                for i in info:
+                    st.markdown(i)
+        else : pass
+
+    with col2:
+
+        if top_pred_acc >= 70: # If the model has a confident prediction, proceed :
+
+            ### Display the model's prediction
+
+            st.markdown(
+                '<h2 style="text-align: center;">Here is our model\'s prediction 👇</h2>',
+                unsafe_allow_html=True
+            )
+            st.markdown(custom_css_green, unsafe_allow_html=True)
+            prediction_display_1 = f"<div class='custom-markdown-green' style='font-size: 24px;'><b>{pred_1}</b></div>"
+            st.markdown(prediction_display_1, unsafe_allow_html=True)
+
+            ### Display image of prediction
+
+            html_code_1 = f"""
+            <div style="padding: 10px; border-radius: 15px; overflow: hidden;">
+                <img src={aircraft_data[top_pred_list[0]]['image_url']} style="width: 100%; height: auto; border-radius: 15px;">
+            </div>
+            """
+
+            st.markdown(html_code_1, unsafe_allow_html=True)
+
+            ### Display expandable box containing secondary and tertiary predictions
+
+            with st.expander('See our model\'s second prediction'):
+                prediction_display_2 = f"<div style='text-align: center; border: 2px solid #ccc; padding: 10px;'>{pred_2}</div>" ##
+                st.markdown(prediction_display_2, unsafe_allow_html=True)
+                st.image(aircraft_data[top_pred_list[1]]['image_url'], caption=f"This is a {aircraft_data[top_pred_list[1]]['display_name']}!", use_column_width=True)
+            with st.expander('See our model\'s third prediction'):
+                prediction_display_3 = f"<div style='text-align: center; border: 2px solid #ccc; padding: 10px;'>{pred_3}</div>" ##
+                st.markdown(prediction_display_3, unsafe_allow_html=True)
+                st.image(aircraft_data[top_pred_list[2]]['image_url'], caption=f"This is a {aircraft_data[top_pred_list[1]]['display_name']}!", use_column_width=True)
 
 
+        else: # Ask user to upload different image, or otherwise see predictions anyway
 
-        # st.write('to be continued..')
-        # st.write(f'{content}')
-        # st.write(f'{prediction_probs}')
-        # st.write(f'{prediction_probs_list}')
+            ### Display to request a different picture
+
+            st.markdown(
+                '<h2 style="text-align: center;">Hmm, our model couldn\'t recognise this aircraft type.. Could you try another image ?</h2>',
+                unsafe_allow_html=True
+            )
+            html_code_3= f"""
+            <div style="padding: 10px; border-radius: 15px; overflow: hidden;">
+                <img src=https://tse1.mm.bing.net/th?id=OIP.d8vl4WyKrSnxwFyyENQtqwHaEK&pid=Api&P=0&h=180 style="width: 100%; height: auto; border-radius: 15px;">
+            </div>
+            """
+
+            st.markdown(html_code_3, unsafe_allow_html=True)
+
+            ### Give user the option to see predictions anyway
+
+            with st.expander('Want to see the model\'s predictions anyway ?'):
+                st.markdown(
+                '<h2 style="text-align: center;">Here is our model\'s prediction 👇</h2>',
+                unsafe_allow_html=True
+                )
+                st.markdown(custom_css_green, unsafe_allow_html=True)
+                prediction_display_1 = f"<div class='custom-markdown-green' style='font-size: 24px;'><b>{pred_1}</b></div>"
+                st.markdown(prediction_display_1, unsafe_allow_html=True)
+                html_code_1 = f"""
+                <div style="padding: 10px; border-radius: 15px; overflow: hidden;">
+                    <img src={aircraft_data[top_pred_list[0]]['image_url']} style="width: 100%; height: auto; border-radius: 15px;">
+                </div>
+                """
+                st.markdown(html_code_1, unsafe_allow_html=True)
