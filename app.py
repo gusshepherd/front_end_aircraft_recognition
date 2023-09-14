@@ -40,6 +40,7 @@ custom_css_green = """
                     </style>
                     """
 
+
 rounded_image_style = """
                     <style>
                         .rounded-image-container {
@@ -57,6 +58,7 @@ rounded_image_style = """
                         }
                     </style>
                     """
+
 
 if img_file_buffer is not None: # if a picture has been uploaded, proceed
 
@@ -146,6 +148,7 @@ if img_file_buffer is not None: # if a picture has been uploaded, proceed
             ### Display the model's prediction
 
             st.markdown(custom_css_green, unsafe_allow_html=True)
+
             prediction_display_1 = f"<div class='custom-markdown-green' style='font-size: 24px;'><b>1️⃣ {pred_1} 🛫</b></div>"
             st.markdown(prediction_display_1, unsafe_allow_html=True)
 
