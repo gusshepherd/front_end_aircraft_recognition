@@ -10,18 +10,17 @@ from base64 import b64encode
 import numpy as np
 import base64
 
+
 # Set page tab display
 st.set_page_config(
-    page_title="Simple Image Uploader",
+    page_title="AeroID",
     page_icon='🖼️',
     layout="wide",
     initial_sidebar_state='collapsed',
 )
-st.sidebar.markdown("---") # column sep
 
 # App title and description
-st.header('Image Uploader 📸')
-
+st.title('AeroID ✈')
 ### Create a native Streamlit file upload input
 # st.markdown("### Aircraft Type Recognition 👇")
 img_file_buffer = st.file_uploader('Upload an image')
@@ -32,7 +31,7 @@ custom_css_green = """
                     <style>
                         .custom-markdown-green {
                             border: 2px solid #00FF00; /* Green border */
-                            border-radius: 15px; /* Rounded corners */
+                            border-radius: 15px; /* Rounded corners *
                             padding: 10px; /* Padding inside the box */
                             background-color: #F0FFF0; /* Light green background */
                             text-align: center; /* Center text */
@@ -138,8 +137,8 @@ if img_file_buffer is not None: # if a picture has been uploaded, proceed
             st.markdown(rounded_image_style, unsafe_allow_html=True)
 
             rounded_image_html_2 = f"""
-            <div class="rounded-image-container">
-                <img src="{img_best_model}" style="width: 100%; height: 400px; border-radius: 15px;" class="rounded-image">
+            <div class="rounded-image-container style="width:600px; hieght:400px; overflow:hidden; border'radius: 15px">
+                <img src="{img_best_model}" style="width: 100%; height: 400px; object-fit: cover;" class="rounded-image">
             </div>
             """
 
@@ -170,7 +169,7 @@ if img_file_buffer is not None: # if a picture has been uploaded, proceed
             ### Display to request a different picture
 
             st.markdown(
-                '<h2 style="text-align: center;">💩 Hmm, our model couldn\'t recognise this aircraft type.. Could you try another image ? 💩</h2>',
+                '<h2 style="text-align: center;">Hmm, our model couldn\'t recognise this aircraft type.. Could you try another image ? 💩</h2>',
                 unsafe_allow_html=True
             )
             html_code_3= f"""
